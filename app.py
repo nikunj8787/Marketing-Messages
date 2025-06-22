@@ -90,4 +90,56 @@ Your positive experience is our top priority.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
+        # 10. Action Oriented
+        f"""🚀 Last few units left at *{prop['Property-Address']}* in {prop['Location']}!
+Book your second site visit or finalize your deal today—don't miss out.
+We are ready to assist you every step of the way.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor."""
+    ]
+
+    # UI: Card-style message display
+    st.markdown("---")
+    st.subheader("Generated WhatsApp Marketing Messages")
+    all_messages = ""
     
+    # Message categories
+    categories = [
+        "PROPERTY BENEFITS", "LOCATION ADVANTAGE", "FOMO/URGENCY", 
+        "TRUST BUILDING", "LIFESTYLE APPEAL", "VALUE PROPOSITION",
+        "FINANCIAL ASSISTANCE", "MARKET ANALYSIS", "SOCIAL VALIDATION", 
+        "ACTION ORIENTED"
+    ]
+    
+    for i, msg in enumerate(messages):
+        # Create card UI
+        st.markdown(
+            f"""
+            <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:16px; border:1px solid #e0e0e0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:bold; color:#2e8b57;">{categories[i]}</div>
+                    <div style="background:#e0f7fa; color:#00838f; border-radius:12px; padding:2px 10px; font-size:13px;">Day {i+1}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        # Display message in text area for easy copying
+        st.text_area(
+            label="",
+            value=msg,
+            height=160,
+            key=f"msg_{i}",
+            help="Click the copy icon to copy this message"
+        )
+        all_messages += msg + "\n\n"
+
+    # Download all messages as .txt
+    st.download_button(
+        "📥 Download All Messages (.txt)",
+        all_messages,
+        file_name=f"{prop['Property-Address'].replace(' ','_').replace('/','_')}_WhatsApp_Followup.txt"
+    )
+
+    st.info("💡 Tip: Copy individual messages using the copy icon, or download all messages for WhatsApp campaigns.")
