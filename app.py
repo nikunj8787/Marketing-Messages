@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="ClearDeals WhatsApp Marketing Generator", layout="wide")
 
-# --- Short links (replace with your own if needed) ---
+# --- Short links (replace with your own) ---
 EMI_LINK = "https://rb.gy/abcd12"  # Shortened EMI calculator link
 VALUATION_LINK = "https://rb.gy/wxyz34"  # Shortened property valuation link
 
@@ -47,3 +47,47 @@ Demand is high and units are moving fast—secure your dream home before it's go
 Contact now to book your site visit and avoid missing out.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 4. Trust Building
+        f"""✅ Join hundreds of happy families who chose *{prop['Property-Address']}*.
+ClearDeals is trusted for transparent, no-brokerage deals and customer-first service.
+Your investment is safe with us—see our track record and testimonials.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 5. Lifestyle Appeal
+        f"""🌟 Experience premium living at *{prop['Property-Address']}*.
+Enjoy amenities like {prop['Amenities']} and a vibrant community atmosphere.
+Perfect for families seeking comfort, security, and a modern lifestyle.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 6. Value Proposition
+        f"""💰 Exceptional value: *{prop['Property-Address']}* offers {prop['BHK']} at just {prop['Property-Price']}.
+Compare with similar properties in {prop['Location']} and see the difference.
+A smart investment for your future—contact us for exclusive deals.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 7. Financial Assistance (EMI)
+        f"""🏦 Need help with home finance? Calculate your EMI instantly for *{prop['Property-Address']}*.
+Use our quick EMI calculator: {EMI_LINK}
+Get expert assistance for loan approval and documentation.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 8. Market Analysis (Valuation)
+        f"""📊 Curious about property value? Get a free valuation report for *{prop['Property-Address']}*.
+Check your property's worth here: {VALUATION_LINK}
+Make informed decisions with ClearDeals' expert insights.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 9. Social Validation
+        f"""👥 Hear from our satisfied buyers at *{prop['Property-Address']}*.
+Join a community of like-minded residents who love their new home.
+Your positive experience is our top priority.
+Reply with a "Hi" to take this deal forward.
+www.cleardeals.co.in, No Brokerage Realtor.""",
+
+        # 10. Action Ori
