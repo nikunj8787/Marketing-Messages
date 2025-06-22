@@ -14,84 +14,100 @@ uploaded_file = st.file_uploader(
     type=["csv", "xls", "xlsx"]
 )
 
+def get_value(prop, possible_names, default=""):
+    """Try multiple column names, return value or default if all missing."""
+    for name in possible_names:
+        if name in prop:
+            return prop[name]
+    return default
+
 if uploaded_file:
     # Load file
     if uploaded_file.name.endswith('.csv'):
         df = pd.read_csv(uploaded_file)
     else:
         df = pd.read_excel(uploaded_file)
-    df.columns = df.columns.str.strip()
+    # Normalize columns: strip spaces, lower-case, replace dashes/underscores with nothing
+    df.columns = [col.strip().replace("-", "").replace("_", "").lower() for col in df.columns]
 
-    tag = st.selectbox("Select Property Tag", df['Tag'].astype(str))
-    prop = df[df['Tag'].astype(str) == tag].iloc[0]
+    st.write("**Columns detected in your file:**", list(df.columns))
+
+    # Use normalized column names for access
+    tag_col = [col for col in df.columns if col.startswith("tag")][0]
+    tag = st.selectbox("Select Property Tag", df[tag_col].astype(str))
+    prop = df[df[tag_col].astype(str) == tag].iloc[0]
+
+    # Helper to get each field robustly
+    def g(colnames, default=""):
+        return get_value(prop, [c.strip().replace("-", "").replace("_", "").lower() for c in colnames], default)
 
     # Compose all 10 messages (each as 4+ lines, with WhatsApp formatting)
     messages = [
         # 1. Property Benefits
-        f"""🏡 *{prop['Property-Address']}* offers a spacious {prop['BHK']} with {prop['Super-Built-up-Construction-Area']} of luxury living space.
+        f"""🏡 *{g(['Property-Address','propertyaddress'])}* offers a spacious {g(['BHK','bhk'])} with {g(['Super-Built-up-Construction-Area','superbuiltuppconstructionarea'])} of luxury living space.
 A perfect blend of comfort and style for your family, with modern interiors and ample natural light.
 Enjoy privacy and convenience in a well-planned layout.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 2. Location Advantage
-        f"""📍 *{prop['Property-Address']}* is at an unbeatable location in {prop['Location']}!
+        f"""📍 *{g(['Property-Address','propertyaddress'])}* is at an unbeatable location in {g(['Location','location'])}!
 Everything you need is just minutes away—schools, hospitals, shopping centers, and public transport.
 Live in a thriving neighborhood with excellent connectivity.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 3. FOMO/Urgency Creation
-        f"""⏳ Opportunities like *{prop['Property-Address']}* in {prop['Location']} don't last long!
+        f"""⏳ Opportunities like *{g(['Property-Address','propertyaddress'])}* in {g(['Location','location'])} don't last long!
 Demand is high and units are moving fast—secure your dream home before it's gone.
 Contact now to book your site visit and avoid missing out.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 4. Trust Building
-        f"""✅ Join hundreds of happy families who chose *{prop['Property-Address']}*.
+        f"""✅ Join hundreds of happy families who chose *{g(['Property-Address','propertyaddress'])}*.
 ClearDeals is trusted for transparent, no-brokerage deals and customer-first service.
 Your investment is safe with us—see our track record and testimonials.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 5. Lifestyle Appeal
-        f"""🌟 Experience premium living at *{prop['Property-Address']}*.
-Enjoy amenities like {prop['Amenities']} and a vibrant community atmosphere.
+        f"""🌟 Experience premium living at *{g(['Property-Address','propertyaddress'])}*.
+Enjoy amenities like {g(['Amenities','amenities'],'modern amenities')} and a vibrant community atmosphere.
 Perfect for families seeking comfort, security, and a modern lifestyle.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 6. Value Proposition
-        f"""💰 Exceptional value: *{prop['Property-Address']}* offers {prop['BHK']} at just {prop['Property-Price']}.
-Compare with similar properties in {prop['Location']} and see the difference.
+        f"""💰 Exceptional value: *{g(['Property-Address','propertyaddress'])}* offers {g(['BHK','bhk'])} at just {g(['Property-Price','propertyprice'])}.
+Compare with similar properties in {g(['Location','location'])} and see the difference.
 A smart investment for your future—contact us for exclusive deals.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 7. Financial Assistance (EMI)
-        f"""🏦 Need help with home finance? Calculate your EMI instantly for *{prop['Property-Address']}*.
+        f"""🏦 Need help with home finance? Calculate your EMI instantly for *{g(['Property-Address','propertyaddress'])}*.
 Use our quick EMI calculator: {EMI_LINK}
 Get expert assistance for loan approval and documentation.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 8. Market Analysis (Valuation)
-        f"""📊 Curious about property value? Get a free valuation report for *{prop['Property-Address']}*.
+        f"""📊 Curious about property value? Get a free valuation report for *{g(['Property-Address','propertyaddress'])}*.
 Check your property's worth here: {VALUATION_LINK}
 Make informed decisions with ClearDeals' expert insights.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 9. Social Validation
-        f"""👥 Hear from our satisfied buyers at *{prop['Property-Address']}*.
+        f"""👥 Hear from our satisfied buyers at *{g(['Property-Address','propertyaddress'])}*.
 Join a community of like-minded residents who love their new home.
 Your positive experience is our top priority.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
         # 10. Action Oriented
-        f"""🚀 Last few units left at *{prop['Property-Address']}* in {prop['Location']}!
+        f"""🚀 Last few units left at *{g(['Property-Address','propertyaddress'])}* in {g(['Location','location'])}!
 Book your second site visit or finalize your deal today—don't miss out.
 We are ready to assist you every step of the way.
 Reply with a "Hi" to take this deal forward.
@@ -103,7 +119,6 @@ www.cleardeals.co.in, No Brokerage Realtor."""
     st.subheader("Generated WhatsApp Marketing Messages")
     all_messages = ""
     
-    # Message categories
     categories = [
         "PROPERTY BENEFITS", "LOCATION ADVANTAGE", "FOMO/URGENCY", 
         "TRUST BUILDING", "LIFESTYLE APPEAL", "VALUE PROPOSITION",
@@ -112,7 +127,6 @@ www.cleardeals.co.in, No Brokerage Realtor."""
     ]
     
     for i, msg in enumerate(messages):
-        # Create card UI
         st.markdown(
             f"""
             <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:16px; border:1px solid #e0e0e0;">
@@ -124,8 +138,6 @@ www.cleardeals.co.in, No Brokerage Realtor."""
             """,
             unsafe_allow_html=True
         )
-        
-        # Display message in text area for easy copying
         st.text_area(
             label="",
             value=msg,
@@ -139,7 +151,7 @@ www.cleardeals.co.in, No Brokerage Realtor."""
     st.download_button(
         "📥 Download All Messages (.txt)",
         all_messages,
-        file_name=f"{prop['Property-Address'].replace(' ','_').replace('/','_')}_WhatsApp_Followup.txt"
+        file_name=f"{g(['Property-Address','propertyaddress']).replace(' ','_').replace('/','_')}_WhatsApp_Followup.txt"
     )
 
     st.info("💡 Tip: Copy individual messages using the copy icon, or download all messages for WhatsApp campaigns.")
