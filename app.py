@@ -12,7 +12,6 @@ VALUATION_LINK = "https://lnk.ink/fkYwF"
 GEOAPIFY_API_KEY = "d1632c8149f94409b7f78f29c458716d"
 
 def process_location(location):
-    # Remove first letter and dash if present, e.g. "A-Gota" -> "Gota"
     if location and len(location) > 2 and location[1] == '-':
         return location[2:].strip()
     return location.strip() if location else ""
@@ -37,7 +36,6 @@ def fetch_nearby(lat, lon, category, limit=2, radius=5000):
     return []
 
 def get_nearby_info(address, city="Ahmedabad", state="Gujarat"):
-    # Try full address first, then fallback to city if needed
     full_address = f"{address}, {city}, {state}"
     lat, lon = geocode_address(full_address)
     if lat is None or lon is None:
@@ -57,7 +55,6 @@ def get_nearby_info(address, city="Ahmedabad", state="Gujarat"):
     }
 
 def get_amenities(address, amenities_from_file):
-    # If amenities are missing or empty, use a generic list
     if pd.isna(amenities_from_file) or str(amenities_from_file).strip().lower() in ["", "nan", "not available"]:
         return "Clubhouse, Gym, Swimming Pool, Security"
     return amenities_from_file
@@ -99,7 +96,6 @@ if uploaded_file:
     price = g(['Property-Price','propertyprice'])
     amenities = get_amenities(property_address, g(['Amenities','amenities']))
 
-    # Fetch real nearby info
     with st.spinner("Fetching real nearby places..."):
         nearby = get_nearby_info(property_address, city="Ahmedabad", state="Gujarat")
     schools = ', '.join(nearby["schools"]) if nearby["schools"] else "top schools nearby"
@@ -107,14 +103,12 @@ if uploaded_file:
     malls = ', '.join(nearby["malls"]) if nearby["malls"] else "popular shopping malls"
     hospitals = ', '.join(nearby["hospitals"]) if nearby["hospitals"] else "multi-speciality hospitals"
 
-    # Show fetched POIs for transparency
     with st.expander("Show fetched nearby places (debug info)"):
         st.write("Schools:", schools)
         st.write("Colleges:", colleges)
         st.write("Malls:", malls)
         st.write("Hospitals:", hospitals)
 
-    # Compose all 10 messages (highly formatted, vertical spacing, emojis, personal, WhatsApp-ready)
     spacing = "\n\n"
     messages = [
         f"""🏡 *{property_address}* is a spacious {bhk} home with {area} of luxury living in {location}.{spacing}You've already shortlisted the best match for your needs after your first visit—congratulations!{spacing}Enjoy comfort, style, and privacy in a thoughtfully designed layout.{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
@@ -123,9 +117,9 @@ if uploaded_file:
 
         f"""⏳ Properties like *{property_address}* in {location} are in high demand!{spacing}You've already picked the best option—don't let this opportunity slip away.{spacing}Secure your dream home before someone else does. Book your next visit or reserve today!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
-        f"""✅ Trust matters! Hundreds of families have chosen *{property_address}* for its transparency and value.{spacing}You’ve made a smart choice with ClearDeals—no brokerage, no hidden fees, just honest service.{spacing}Your investment is protected with us. Let's move ahead!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+        f"""✅ Trust matters! Many families have shortlisted *{property_address}* for its transparency and value.{spacing}You’ve made a smart choice with ClearDeals—no brokerage, no hidden fees, just honest service.{spacing}Your investment is protected with us. Let's move ahead!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
-        f"""🌟 Imagine your family enjoying {amenities} at *{property_address}*.{spacing}The community is lively, secure, and perfect for a modern lifestyle.{spacing}You’ve already found the right fit—let’s make it yours!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+        f"""🌟 Imagine your family enjoying the Best Amenities and Neighborhood at *{property_address}*.{spacing}The community is lively, secure, and perfect for a modern lifestyle.{spacing}You’ve already found the right fit—let’s make it yours!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
         f"""💰 Value for money! *{property_address}* offers a {bhk} at just {price} in {location}.{spacing}Compared to similar properties, this is a standout deal.{spacing}You’ve done your homework—now let’s close the best deal for you!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
