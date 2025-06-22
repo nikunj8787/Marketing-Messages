@@ -8,7 +8,7 @@ st.set_page_config(page_title="ClearDeals WhatsApp Marketing Generator", layout=
 EMI_LINK = "https://lnk.ink/FUwEc"
 VALUATION_LINK = "https://lnk.ink/fkYwF"
 
-# --- Your Geoapify API Key ---
+# --- Geoapify API Key ---
 GEOAPIFY_API_KEY = "d1632c8149f94409b7f78f29c458716d"
 
 def process_location(location):
@@ -110,4 +110,57 @@ if uploaded_file:
 
         f"""📍 Location is everything! *{property_address}* is in the heart of {location}.{spacing}Top schools: {schools}{spacing}Colleges: {colleges}{spacing}Shopping malls: {malls}{spacing}Hospitals: {hospitals}{spacing}You’ve chosen a vibrant, well-connected neighborhood—move forward with confidence!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
-        f"""⏳ Properties like *{property_address}* in {location} are in high demand!{spacing}You've already picked the best option—don't let this opportunity slip away.{spacing}Secure your dream home before someone else does. Book your next visit or reserve today!{spacing}Reply with
+        f"""⏳ Properties like *{property_address}* in {location} are in high demand!{spacing}You've already picked the best option—don't let this opportunity slip away.{spacing}Secure your dream home before someone else does. Book your next visit or reserve today!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""✅ Trust matters! Hundreds of families have chosen *{property_address}* for its transparency and value.{spacing}You’ve made a smart choice with ClearDeals—no brokerage, no hidden fees, just honest service.{spacing}Your investment is protected with us. Let's move ahead!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""🌟 Imagine your family enjoying {amenities} at *{property_address}*.{spacing}The community is lively, secure, and perfect for a modern lifestyle.{spacing}You’ve already found the right fit—let’s make it yours!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""💰 Value for money! *{property_address}* offers a {bhk} at just {price} in {location}.{spacing}Compared to similar properties, this is a standout deal.{spacing}You’ve done your homework—now let’s close the best deal for you!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""🏦 Need help with home finance? Calculate your EMI for *{property_address}* here: {EMI_LINK}{spacing}Our experts will guide you through loan approval and paperwork, so you can move in stress-free.{spacing}You’ve selected the right home—let’s make it yours!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""📊 Want to know the market value? Get a free valuation report for *{property_address}*: {VALUATION_LINK}{spacing}Make an informed decision—ClearDeals provides verified insights for your peace of mind.{spacing}You’ve already shortlisted the best—let’s take the next step!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""👥 Join happy residents at *{property_address}*—read their stories and see why they love it here.{spacing}You’ve chosen a community with great reviews and a welcoming vibe.{spacing}Let’s make you the newest member!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+
+        f"""🎯 Ready to move ahead with *{property_address}* in {location}?{spacing}You’ve already found your perfect fit—now’s the time to act.{spacing}Let’s finalize your dream home and start your new journey!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor."""
+    ]
+
+    st.markdown("---")
+    st.subheader("Generated WhatsApp Marketing Messages")
+    all_messages = ""
+    categories = [
+        "PROPERTY BENEFITS", "LOCATION ADVANTAGE", "FOMO/URGENCY", 
+        "TRUST BUILDING", "LIFESTYLE APPEAL", "VALUE PROPOSITION",
+        "FINANCIAL ASSISTANCE", "MARKET ANALYSIS", "SOCIAL VALIDATION", 
+        "ACTION ORIENTED"
+    ]
+    for i, msg in enumerate(messages):
+        st.markdown(
+            f"""
+            <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:16px; border:1px solid #e0e0e0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:bold; color:#2e8b57;">{categories[i]}</div>
+                    <div style="background:#e0f7fa; color:#00838f; border-radius:12px; padding:2px 10px; font-size:13px;">Day {i+1}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.text_area(
+            label="",
+            value=msg,
+            height=220,
+            key=f"msg_{i}",
+            help="Click the copy icon to copy this message"
+        )
+        all_messages += msg + "\n\n"
+
+    st.download_button(
+        "📥 Download All Messages (.txt)",
+        all_messages,
+        file_name=f"{property_address.replace(' ','_').replace('/','_')}_WhatsApp_Followup.txt"
+    )
+
+    st.info("💡 Tip: Copy individual messages using the copy icon, or download all messages for WhatsApp campaigns.")
