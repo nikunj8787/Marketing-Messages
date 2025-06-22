@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import pyperclip
 
 st.set_page_config(page_title="ClearDeals WhatsApp Marketing Generator", layout="wide")
 
@@ -8,7 +7,7 @@ st.set_page_config(page_title="ClearDeals WhatsApp Marketing Generator", layout=
 EMI_LINK = "https://rb.gy/abcd12"  # Shortened EMI calculator link
 VALUATION_LINK = "https://rb.gy/wxyz34"  # Shortened property valuation link
 
-st.title("Generated WhatsApp Marketing Messages")
+st.title("ClearDeals WhatsApp Marketing Message Generator")
 
 uploaded_file = st.file_uploader(
     "Upload your property file (.csv, .xls, .xlsx)", 
@@ -16,6 +15,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
+    # Load file
     if uploaded_file.name.endswith('.csv'):
         df = pd.read_csv(uploaded_file)
     else:
@@ -47,91 +47,3 @@ Demand is high and units are moving fast—secure your dream home before it's go
 Contact now to book your site visit and avoid missing out.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 4. Trust Building
-        f"""✅ Join hundreds of happy families who chose *{prop['Property-Address']}*.
-ClearDeals is trusted for transparent, no-brokerage deals and customer-first service.
-Your investment is safe with us—see our track record and testimonials.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 5. Lifestyle Appeal
-        f"""🌟 Experience premium living at *{prop['Property-Address']}*.
-Enjoy amenities like {prop['Amenities']} and a vibrant community atmosphere.
-Perfect for families seeking comfort, security, and a modern lifestyle.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 6. Value Proposition
-        f"""💰 Exceptional value: *{prop['Property-Address']}* offers {prop['BHK']} at just {prop['Property-Price']}.
-Compare with similar properties in {prop['Location']} and see the difference.
-A smart investment for your future—contact us for exclusive deals.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 7. Financial Assistance (EMI)
-        f"""🏦 Need help with home finance? Calculate your EMI instantly for *{prop['Property-Address']}*.
-Use our quick EMI calculator: {EMI_LINK}
-Get expert assistance for loan approval and documentation.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 8. Market Analysis (Valuation)
-        f"""📊 Curious about property value? Get a free valuation report for *{prop['Property-Address']}*.
-Check your property's worth here: {VALUATION_LINK}
-Make informed decisions with ClearDeals' expert insights.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 9. Social Validation
-        f"""👥 Hear from our satisfied buyers at *{prop['Property-Address']}*.
-Join a community of like-minded residents who love their new home.
-Your positive experience is our top priority.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor.""",
-
-        # 10. Action Oriented
-        f"""🚀 Last few units left at *{prop['Property-Address']}* in {prop['Location']}!
-Book your second site visit or finalize your deal today—don't miss out.
-We are ready to assist you every step of the way.
-Reply with a "Hi" to take this deal forward.
-www.cleardeals.co.in, No Brokerage Realtor."""
-    ]
-
-    # UI: Card-style message display, day tag, copy/share
-    st.markdown("---")
-    st.subheader("Generated WhatsApp Marketing Messages")
-    all_messages = ""
-    for i, msg in enumerate(messages):
-        st.markdown(
-            f"""
-            <div style="background:#23272F; border-radius:12px; padding:18px; margin-bottom:18px; border:1px solid #1e2228;">
-                <div style="font-size:15px; color:#00e0d3; font-weight:bold; margin-bottom:4px;">{['PROPERTY BENEFITS','LOCATION ADVANTAGE','FOMO/URGENCY','TRUST BUILDING','LIFESTYLE APPEAL','VALUE PROPOSITION','FINANCIAL ASSISTANCE','MARKET ANALYSIS','SOCIAL VALIDATION','ACTION ORIENTED'][i]}</div>
-                <div style="color:#fff; font-size:16px; white-space:pre-line;">{msg}</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                    <span style="background:#333; color:#aaa; border-radius:8px; padding:2px 10px; font-size:13px;">Day {i+1}</span>
-                    <button onclick="navigator.clipboard.writeText(`{msg}`)" style="background:#00e0d3; color:#222; border:none; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:13px;">Copy Message</button>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        all_messages += msg + "\n\n"
-
-    # Bulk copy (for browsers that support pyperclip)
-    if st.button("Copy All Messages"):
-        try:
-            pyperclip.copy(all_messages)
-            st.success("All messages copied to clipboard!")
-        except Exception:
-            st.warning("Bulk copy may not work on all browsers. Please use Download All.")
-
-    # Download all messages as .txt
-    st.download_button(
-        "Download All Messages (.txt)",
-        all_messages,
-        file_name=f"{prop['Property-Address'].replace(' ','_')}_WhatsApp_Followup.txt"
-    )
-
-    st.info("You can copy individual messages or download all for WhatsApp sharing. For best results, paste into WhatsApp Web or App.")
-
