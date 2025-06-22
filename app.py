@@ -90,4 +90,4 @@ Your positive experience is our top priority.
 Reply with a "Hi" to take this deal forward.
 www.cleardeals.co.in, No Brokerage Realtor.""",
 
-        # 10. Action Ori
+    
