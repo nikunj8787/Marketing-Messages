@@ -25,10 +25,10 @@ def geocode_address(address):
         return coords[1], coords[0]  # lat, lon
     return None, None
 
-def fetch_nearby(lat, lon, category, limit=2):
+def fetch_nearby(lat, lon, category, limit=2, radius=5000):
     url = (
         f"https://api.geoapify.com/v2/places?categories={category}"
-        f"&filter=circle:{lon},{lat},2000&limit={limit}&apiKey={GEOAPIFY_API_KEY}"
+        f"&filter=circle:{lon},{lat},{radius}&limit={limit}&apiKey={GEOAPIFY_API_KEY}"
     )
     resp = requests.get(url)
     if resp.status_code == 200:
@@ -36,8 +36,12 @@ def fetch_nearby(lat, lon, category, limit=2):
         return [f["properties"]["name"] for f in features if "name" in f["properties"]]
     return []
 
-def get_nearby_info(address):
-    lat, lon = geocode_address(address)
+def get_nearby_info(address, city="Ahmedabad", state="Gujarat"):
+    # Try full address first, then fallback to city if needed
+    full_address = f"{address}, {city}, {state}"
+    lat, lon = geocode_address(full_address)
+    if lat is None or lon is None:
+        lat, lon = geocode_address(f"{city}, {state}")
     if lat is None or lon is None:
         return {
             "schools": [],
@@ -46,10 +50,10 @@ def get_nearby_info(address):
             "hospitals": [],
         }
     return {
-        "schools": fetch_nearby(lat, lon, "education.school", limit=2),
-        "colleges": fetch_nearby(lat, lon, "education.college", limit=2),
-        "malls": fetch_nearby(lat, lon, "commercial.shopping_mall", limit=2),
-        "hospitals": fetch_nearby(lat, lon, "healthcare.hospital", limit=2),
+        "schools": fetch_nearby(lat, lon, "education.school", limit=2, radius=5000),
+        "colleges": fetch_nearby(lat, lon, "education.college", limit=2, radius=5000),
+        "malls": fetch_nearby(lat, lon, "commercial.shopping_mall", limit=2, radius=5000),
+        "hospitals": fetch_nearby(lat, lon, "healthcare.hospital", limit=2, radius=5000),
     }
 
 def get_amenities(address, amenities_from_file):
@@ -97,18 +101,25 @@ if uploaded_file:
 
     # Fetch real nearby info
     with st.spinner("Fetching real nearby places..."):
-        nearby = get_nearby_info(f"{property_address}, {location}")
+        nearby = get_nearby_info(property_address, city="Ahmedabad", state="Gujarat")
     schools = ', '.join(nearby["schools"]) if nearby["schools"] else "top schools nearby"
     colleges = ', '.join(nearby["colleges"]) if nearby["colleges"] else "reputed colleges in the area"
     malls = ', '.join(nearby["malls"]) if nearby["malls"] else "popular shopping malls"
     hospitals = ', '.join(nearby["hospitals"]) if nearby["hospitals"] else "multi-speciality hospitals"
+
+    # Show fetched POIs for transparency
+    with st.expander("Show fetched nearby places (debug info)"):
+        st.write("Schools:", schools)
+        st.write("Colleges:", colleges)
+        st.write("Malls:", malls)
+        st.write("Hospitals:", hospitals)
 
     # Compose all 10 messages (highly formatted, vertical spacing, emojis, personal, WhatsApp-ready)
     spacing = "\n\n"
     messages = [
         f"""🏡 *{property_address}* is a spacious {bhk} home with {area} of luxury living in {location}.{spacing}You've already shortlisted the best match for your needs after your first visit—congratulations!{spacing}Enjoy comfort, style, and privacy in a thoughtfully designed layout.{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
-        f"""📍 Location is everything! *{property_address}* is in the heart of {location}.{spacing}Top schools: {schools}{spacing}Colleges: {colleges}{spacing}Shopping malls: {malls}{spacing}Hospitals: {hospitals}{spacing}You’ve chosen a vibrant, well-connected neighborhood—move forward with confidence!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
+        f"""📍 Location is everything! *{property_address}* is in the heart of {location}.{spacing}🏫 Top schools: {schools}{spacing}🎓 Colleges: {colleges}{spacing}🛍️ Shopping malls: {malls}{spacing}🏥 Hospitals: {hospitals}{spacing}You’ve chosen a vibrant, well-connected neighborhood—move forward with confidence!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
         f"""⏳ Properties like *{property_address}* in {location} are in high demand!{spacing}You've already picked the best option—don't let this opportunity slip away.{spacing}Secure your dream home before someone else does. Book your next visit or reserve today!{spacing}Reply with a "Hi" to take this deal forward.\nwww.cleardeals.co.in, No Brokerage Realtor.""",
 
@@ -139,7 +150,7 @@ if uploaded_file:
     for i, msg in enumerate(messages):
         st.markdown(
             f"""
-            <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:16px; border:1px solid #e0e0e0;">
+            <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:16px; border:1px solid #e0e0e0; line-height:1.5;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="font-weight:bold; color:#2e8b57;">{categories[i]}</div>
                     <div style="background:#e0f7fa; color:#00838f; border-radius:12px; padding:2px 10px; font-size:13px;">Day {i+1}</div>
