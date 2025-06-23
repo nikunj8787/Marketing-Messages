@@ -24,11 +24,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- API Configuration (replace with your secrets or hardcode for local testing) ---
-GEOAPIFY_API_KEY = st.secrets.get("geoapify", {}).get("api_key", "d1632c8149f94409b7f78f29c458716d")
-HF_API_TOKEN = st.secrets.get("huggingface", {}).get("api_token", "")
-EMI_LINK = st.secrets.get("links", {}).get("emi_calculator", "https://lnk.ink/FUwEc")
-VALUATION_LINK = st.secrets.get("links", {}).get("valuation_calculator", "https://lnk.ink/fkYwF")
+# --- API Configuration ---
+DEEPSEEK_API_KEY = "sk-54bd3323c4d14bf08b941f0bff7a47d5"
+EMI_LINK = "https://lnk.ink/FUwEc"
+VALUATION_LINK = "https://lnk.ink/fkYwF"
 
 GUJARATI_TEMPLATES = [
     {
@@ -137,91 +136,41 @@ class PropertyDataProcessor:
         tag = row.get('Tag', None)
         return f"{tag or project_name} - {city}"
 
-class HuggingFaceLLM:
-    def __init__(self, api_token: str):
-        self.api_token = api_token
-        self.headers = {"Authorization": f"Bearer {api_token}"}
-        self.model_gujarati = "facebook/mbart-large-50-many-to-many-mmt"
-        self.model_english = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-    def generate_gujarati_message(self, property_data: Dict, day: int, message_type: str, nearby_places: Dict) -> str:
-        if not self.api_token:
-            return "LLM API token missing."
-        prompt = self._create_gujarati_prompt(property_data, day, message_type, nearby_places)
-        return self._call_llm(prompt, self.model_gujarati, "Gujarati")
-    def generate_english_message(self, property_data: Dict, day: int, message_type: str, nearby_places: Dict) -> str:
-        if not self.api_token:
-            return self._generate_fallback_english(property_data, day, message_type)
-        prompt = self._create_english_prompt(property_data, day, message_type, nearby_places)
-        return self._call_llm(prompt, self.model_english, "English")
-    def _call_llm(self, prompt: str, model: str, language: str) -> str:
+class DeepSeekLLM:
+    def __init__(self, api_key: str, model: str = "deepseek-chat"):
+        self.api_key = api_key
+        self.model = model
+        self.api_url = "https://api.deepseek.com/v1/chat/completions"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+    def generate_message(self, prompt: str, language: str = "English") -> str:
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": f"You are a helpful assistant that writes {language} WhatsApp marketing messages for real estate buyers."},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 200,
+            "temperature": 0.8,
+            "top_p": 0.95
+        }
         try:
-            url = f"https://api-inference.huggingface.co/models/{model}"
-            payload = {
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 200,
-                    "temperature": 0.8,
-                    "top_p": 0.95,
-                    "do_sample": True,
-                    "repetition_penalty": 1.1
-                }
-            }
-            response = requests.post(url, headers=self.headers, json=payload, timeout=30)
+            response = requests.post(self.api_url, headers=self.headers, json=payload, timeout=30)
             if response.status_code == 200:
                 result = response.json()
-                if isinstance(result, list) and result:
-                    generated = result[0].get("generated_text", "")
-                    return self._clean_generated_text(generated, prompt)
-                elif isinstance(result, dict):
-                    generated = result.get("generated_text", "")
-                    return self._clean_generated_text(generated, prompt)
+                return result["choices"][0]["message"]["content"].strip()
+            else:
+                st.warning(f"DeepSeek API error: {response.status_code} {response.text}")
         except Exception as e:
-            st.warning(f"LLM generation failed: {str(e)}")
-        return f"[{language} LLM generation failed or quota exceeded.]"
-    def _create_gujarati_prompt(self, property_data: Dict, day: int, message_type: str, nearby_places: Dict) -> str:
-        return (
-            f"Create a Gujarati WhatsApp marketing message for a home buyer who has already visited this property. "
-            f"Day {day}: {message_type}. "
-            f"Property: {property_data.get('A','NA')}, City: {property_data.get('B','NA')}, Locality: {property_data.get('C','NA')}, "
-            f"Price: {property_data.get('D','NA')}, BHK: {property_data.get('E','NA')}, Area: {property_data.get('F','NA')} sq.yds, "
-            f"Floor: {property_data.get('G','NA')}, Facing: {property_data.get('H','NA')}, Furnishing: {property_data.get('I','NA')}, "
-            f"Age: {property_data.get('J','NA')}, 360 Tour: {property_data.get('K','NA')}, Video: {property_data.get('L','NA')}. "
-            f"Message should be 3-4 lines, include one emoji, and end with: 'રિપ્લાય કરો YES જો રસ હોય તો.'"
-            f" Write in Gujarati only."
-        )
-    def _create_english_prompt(self, property_data: Dict, day: int, message_type: str, nearby_places: Dict) -> str:
-        nearby_text = ""
-        if nearby_places.get("schools"):
-            nearby_text += f"Nearby schools: {', '.join(nearby_places['schools'][:2])}. "
-        if nearby_places.get("hospitals"):
-            nearby_text += f"Hospitals: {', '.join(nearby_places['hospitals'][:2])}. "
-        if nearby_places.get("malls"):
-            nearby_text += f"Shopping: {', '.join(nearby_places['malls'][:2])}. "
-        return (
-            f"Write a professional, friendly, and concise English WhatsApp marketing message for a home buyer who has already visited this property. "
-            f"Focus for Day {day}: {message_type}. "
-            f"Property details: Project: {property_data.get('A','NA')}, City: {property_data.get('B','NA')}, Locality: {property_data.get('C','NA')}, "
-            f"Price: {property_data.get('D','NA')}, BHK: {property_data.get('E','NA')}, Area: {property_data.get('F','NA')} sq.yds, "
-            f"Floor: {property_data.get('G','NA')}, Facing: {property_data.get('H','NA')}, Furnishing: {property_data.get('I','NA')}, "
-            f"Age: {property_data.get('J','NA')}, 360 Tour: {property_data.get('K','NA')}, Video: {property_data.get('L','NA')}. "
-            f"{nearby_text} "
-            f"Message should be 3-4 lines, include one emoji, and end with: 'Reply YES if interested.'"
-        )
-    def _clean_generated_text(self, generated: str, prompt: str) -> str:
-        if prompt in generated:
-            generated = generated.replace(prompt, "").strip()
-        lines = [line.strip() for line in generated.split('\n') if line.strip()]
-        return '\n'.join(lines[:4])
-    def _generate_fallback_english(self, property_data: Dict, day: int, message_type: str) -> str:
-        return (
-            f"{property_data.get('A','This property')} is a great option in {property_data.get('C','your preferred area')}."
-            f" Contact us for more details. Reply YES if interested."
-        )
+            st.warning(f"DeepSeek API call failed: {str(e)}")
+        return "[DeepSeek LLM generation failed.]"
 
 class MessageGenerator:
     def __init__(self):
         self.processor = PropertyDataProcessor()
-        self.llm = HuggingFaceLLM(HF_API_TOKEN)
+        self.llm = DeepSeekLLM(DEEPSEEK_API_KEY)
     def generate_static_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
         for template_info in GUJARATI_TEMPLATES:
@@ -238,8 +187,6 @@ class MessageGenerator:
         return messages
     def generate_llm_gujarati_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
-        location = f"{property_data.get('A', '')}, {property_data.get('C', '')}, {property_data.get('B', '')}"
-        nearby_places = {}  # Skipping actual API for batch speed, add if needed
         message_types = [
             "Property Features Reminder",
             "Location & Lifestyle Benefits", 
@@ -251,9 +198,8 @@ class MessageGenerator:
             "Final Decision Urgency"
         ]
         for i, message_type in enumerate(message_types):
-            generated_message = self.llm.generate_gujarati_message(
-                property_data, i+1, message_type, nearby_places
-            )
+            prompt = self._create_gujarati_prompt(property_data, i+1, message_type)
+            generated_message = self.llm.generate_message(prompt, language="Gujarati")
             messages.append({
                 "day": i+1,
                 "title": message_type,
@@ -263,8 +209,6 @@ class MessageGenerator:
         return messages
     def generate_llm_english_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
-        location = f"{property_data.get('A', '')}, {property_data.get('C', '')}, {property_data.get('B', '')}"
-        nearby_places = {}  # Skipping actual API for batch speed, add if needed
         message_types = [
             "Property Features Reminder",
             "Location & Lifestyle Benefits", 
@@ -276,9 +220,8 @@ class MessageGenerator:
             "Final Decision Urgency"
         ]
         for i, message_type in enumerate(message_types):
-            generated_message = self.llm.generate_english_message(
-                property_data, i+1, message_type, nearby_places
-            )
+            prompt = self._create_english_prompt(property_data, i+1, message_type)
+            generated_message = self.llm.generate_message(prompt, language="English")
             messages.append({
                 "day": i+1,
                 "title": message_type,
@@ -286,6 +229,26 @@ class MessageGenerator:
                 "type": "llm_english"
             })
         return messages
+    def _create_gujarati_prompt(self, property_data, day, message_type):
+        return (
+            f"Create a Gujarati WhatsApp marketing message for a home buyer who has already visited this property. "
+            f"Day {day}: {message_type}. "
+            f"Property: {property_data.get('A','NA')}, City: {property_data.get('B','NA')}, Locality: {property_data.get('C','NA')}, "
+            f"Price: {property_data.get('D','NA')}, BHK: {property_data.get('E','NA')}, Area: {property_data.get('F','NA')} sq.yds, "
+            f"Floor: {property_data.get('G','NA')}, Facing: {property_data.get('H','NA')}, Furnishing: {property_data.get('I','NA')}, "
+            f"Age: {property_data.get('J','NA')}, 360 Tour: {property_data.get('K','NA')}, Video: {property_data.get('L','NA')}. "
+            f"Message should be 3-4 lines, include one emoji, and end with: 'રિપ્લાય કરો YES જો રસ હોય તો.' Write in Gujarati only."
+        )
+    def _create_english_prompt(self, property_data, day, message_type):
+        return (
+            f"Write a professional, friendly, and concise English WhatsApp marketing message for a home buyer who has already visited this property. "
+            f"Focus for Day {day}: {message_type}. "
+            f"Property details: Project: {property_data.get('A','NA')}, City: {property_data.get('B','NA')}, Locality: {property_data.get('C','NA')}, "
+            f"Price: {property_data.get('D','NA')}, BHK: {property_data.get('E','NA')}, Area: {property_data.get('F','NA')} sq.yds, "
+            f"Floor: {property_data.get('G','NA')}, Facing: {property_data.get('H','NA')}, Furnishing: {property_data.get('I','NA')}, "
+            f"Age: {property_data.get('J','NA')}, 360 Tour: {property_data.get('K','NA')}, Video: {property_data.get('L','NA')}. "
+            f"Message should be 3-4 lines, include one emoji, and end with: 'Reply YES if interested.'"
+        )
 
 def create_download_content(messages: List[Dict], property_data: Dict) -> str:
     content = f"ClearDeals Marketing Messages\n"
@@ -449,7 +412,7 @@ def main():
         - 🎯 **8-Day Sequential Messages**
         - 🌐 **Gujarati & English Language**
         - 📝 **Static Templates**
-        - 🤖 **AI-Powered Generation**
+        - 🤖 **AI-Powered Generation (DeepSeek)**
         - 📱 **WhatsApp Optimized**
         - 💾 **Batch Processing & ZIP Download**
         - 📋 **Easy Copy & Download**
