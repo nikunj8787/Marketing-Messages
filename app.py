@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import io
+import zipfile
 from typing import Dict, List, Optional, Tuple
 
 st.set_page_config(
@@ -11,7 +13,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS for Gujarati font and styling ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;500;600;700&display=swap');
@@ -23,19 +24,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- API Configuration ---
-try:
-    GEOAPIFY_API_KEY = st.secrets.get("geoapify", {}).get("api_key", "d1632c8149f94409b7f78f29c458716d")
-    HF_API_TOKEN = st.secrets.get("huggingface", {}).get("api_token", "")
-    EMI_LINK = st.secrets.get("links", {}).get("emi_calculator", "https://lnk.ink/FUwEc")
-    VALUATION_LINK = st.secrets.get("links", {}).get("valuation_calculator", "https://lnk.ink/fkYwF")
-except Exception:
-    GEOAPIFY_API_KEY = "d1632c8149f94409b7f78f29c458716d"
-    HF_API_TOKEN = ""
-    EMI_LINK = "https://lnk.ink/FUwEc"
-    VALUATION_LINK = "https://lnk.ink/fkYwF"
+# --- API Configuration (replace with your secrets or hardcode for local testing) ---
+GEOAPIFY_API_KEY = st.secrets.get("geoapify", {}).get("api_key", "d1632c8149f94409b7f78f29c458716d")
+HF_API_TOKEN = st.secrets.get("huggingface", {}).get("api_token", "")
+EMI_LINK = st.secrets.get("links", {}).get("emi_calculator", "https://lnk.ink/FUwEc")
+VALUATION_LINK = st.secrets.get("links", {}).get("valuation_calculator", "https://lnk.ink/fkYwF")
 
-# --- Gujarati Static Templates ---
 GUJARATI_TEMPLATES = [
     {
         "day": 1,
@@ -140,43 +134,8 @@ class PropertyDataProcessor:
     def format_property_identifier(row: pd.Series) -> str:
         project_name = row.get('A', 'Unknown')
         city = row.get('B', 'Unknown')
-        return f"{project_name} - {city}"
-
-class GeoapifyService:
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-    def get_nearby_places(self, location: str) -> Dict[str, List[str]]:
-        if not self.api_key or self.api_key == "":
-            return {"schools": [], "hospitals": [], "malls": [], "colleges": []}
-        try:
-            lat, lon = self._geocode_location(location)
-            if not lat or not lon:
-                return {"schools": [], "hospitals": [], "malls": [], "colleges": []}
-            return {
-                "schools": self._fetch_places(lat, lon, "education.school"),
-                "hospitals": self._fetch_places(lat, lon, "healthcare.hospital"),
-                "malls": self._fetch_places(lat, lon, "commercial.shopping_mall"),
-                "colleges": self._fetch_places(lat, lon, "education.college")
-            }
-        except Exception as e:
-            st.warning(f"Could not fetch nearby places: {str(e)}")
-            return {"schools": [], "hospitals": [], "malls": [], "colleges": []}
-    def _geocode_location(self, location: str) -> Tuple[Optional[float], Optional[float]]:
-        url = f"https://api.geoapify.com/v1/geocode/search?text={location}&apiKey={self.api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("features"):
-                coords = data["features"][0]["geometry"]["coordinates"]
-                return coords[1], coords[0]
-        return None, None
-    def _fetch_places(self, lat: float, lon: float, category: str, limit: int = 2) -> List[str]:
-        url = f"https://api.geoapify.com/v2/places?categories={category}&filter=circle:{lon},{lat},3000&limit={limit}&apiKey={self.api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return [place["properties"]["name"] for place in data.get("features", []) if "name" in place["properties"]]
-        return []
+        tag = row.get('Tag', None)
+        return f"{tag or project_name} - {city}"
 
 class HuggingFaceLLM:
     def __init__(self, api_token: str):
@@ -261,9 +220,8 @@ class HuggingFaceLLM:
 
 class MessageGenerator:
     def __init__(self):
-        self.geoapify = GeoapifyService(GEOAPIFY_API_KEY)
-        self.llm = HuggingFaceLLM(HF_API_TOKEN)
         self.processor = PropertyDataProcessor()
+        self.llm = HuggingFaceLLM(HF_API_TOKEN)
     def generate_static_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
         for template_info in GUJARATI_TEMPLATES:
@@ -281,7 +239,7 @@ class MessageGenerator:
     def generate_llm_gujarati_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
         location = f"{property_data.get('A', '')}, {property_data.get('C', '')}, {property_data.get('B', '')}"
-        nearby_places = self.geoapify.get_nearby_places(location)
+        nearby_places = {}  # Skipping actual API for batch speed, add if needed
         message_types = [
             "Property Features Reminder",
             "Location & Lifestyle Benefits", 
@@ -292,7 +250,6 @@ class MessageGenerator:
             "Property Valuation",
             "Final Decision Urgency"
         ]
-        progress_bar = st.progress(0)
         for i, message_type in enumerate(message_types):
             generated_message = self.llm.generate_gujarati_message(
                 property_data, i+1, message_type, nearby_places
@@ -303,14 +260,11 @@ class MessageGenerator:
                 "message": generated_message,
                 "type": "llm_gujarati"
             })
-            progress_bar.progress((i+1) / len(message_types))
-            time.sleep(0.5)
-        progress_bar.empty()
         return messages
     def generate_llm_english_messages(self, property_data: Dict) -> List[Dict]:
         messages = []
         location = f"{property_data.get('A', '')}, {property_data.get('C', '')}, {property_data.get('B', '')}"
-        nearby_places = self.geoapify.get_nearby_places(location)
+        nearby_places = {}  # Skipping actual API for batch speed, add if needed
         message_types = [
             "Property Features Reminder",
             "Location & Lifestyle Benefits", 
@@ -321,7 +275,6 @@ class MessageGenerator:
             "Property Valuation",
             "Final Decision Urgency"
         ]
-        progress_bar = st.progress(0)
         for i, message_type in enumerate(message_types):
             generated_message = self.llm.generate_english_message(
                 property_data, i+1, message_type, nearby_places
@@ -332,9 +285,6 @@ class MessageGenerator:
                 "message": generated_message,
                 "type": "llm_english"
             })
-            progress_bar.progress((i+1) / len(message_types))
-            time.sleep(0.5)
-        progress_bar.empty()
         return messages
 
 def create_download_content(messages: List[Dict], property_data: Dict) -> str:
@@ -367,13 +317,10 @@ def main():
             help="Choose between predefined Gujarati templates, Gujarati AI, or English AI messages"
         )
         st.markdown('<div class="toggle-container">', unsafe_allow_html=True)
-        st.markdown("### 🔗 API Status")
-        st.success("✅ Geoapify: Connected") if GEOAPIFY_API_KEY else st.error("❌ Geoapify: Not configured")
-        st.success("✅ HuggingFace: Connected") if HF_API_TOKEN else st.warning("⚠️ HuggingFace: Not configured")
-        st.markdown('</div>', unsafe_allow_html=True)
         with st.expander("📋 Column Mapping Reference"):
             for key, desc in COLUMN_MAPPING.items():
                 st.write(f"**{key}**: {desc}")
+        st.markdown('</div>', unsafe_allow_html=True)
     col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown('<div class="upload-area">', unsafe_allow_html=True)
@@ -441,54 +388,61 @@ def main():
                             use_container_width=True
                         )
                         st.markdown("---")
-                        if st.button("🔄 Generate for All Properties", type="secondary"):
-                            batch_messages = {}
-                            progress_container = st.container()
-                            with progress_container:
-                                progress_bar = st.progress(0)
-                                status_text = st.empty()
-                                for idx, (_, row) in enumerate(df_clean.iterrows()):
-                                    property_data = row.to_dict()
-                                    property_id = processor.format_property_identifier(row)
-                                    status_text.text(f"Processing: {property_id}")
-                                    if generation_mode == "📝 Static Templates (Gujarati)":
-                                        batch_messages[property_id] = message_generator.generate_static_messages(property_data)
-                                    elif generation_mode == "🤖 LLM-Powered Dynamic (Gujarati)":
-                                        batch_messages[property_id] = message_generator.generate_llm_gujarati_messages(property_data)
-                                    else:
-                                        batch_messages[property_id] = message_generator.generate_llm_english_messages(property_data)
-                                    progress_bar.progress((idx + 1) / len(df_clean))
-                                    time.sleep(0.1)
-                                progress_bar.empty()
-                                status_text.empty()
-                            batch_content = "ClearDeals Marketing Messages - Batch Export\n"
-                            batch_content += f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                            batch_content += "="*60 + "\n\n"
-                            for property_id, messages in batch_messages.items():
-                                batch_content += f"PROPERTY: {property_id}\n"
-                                batch_content += "-" * 40 + "\n"
-                                for msg in messages:
-                                    batch_content += f"Day {msg['day']}: {msg['title']}\n{msg['message']}\n\n"
-                                batch_content += "="*60 + "\n\n"
-                            st.download_button(
-                                label="📦 Download Batch Messages",
-                                data=batch_content.encode('utf-8'),
-                                file_name=f"ClearDeals_Batch_Messages_{time.strftime('%Y%m%d_%H%M%S')}.txt",
-                                mime="text/plain",
-                                use_container_width=True
-                            )
-                            st.success(f"✅ Batch processing completed for {len(df_clean)} properties!")
+                    # BATCH GENERATION SECTION
+                    if st.button("🔄 Generate for All Properties", type="secondary"):
+                        batch_messages = {}
+                        progress_container = st.container()
+                        with progress_container:
+                            progress_bar = st.progress(0)
+                            status_text = st.empty()
+                            for idx, (_, row) in enumerate(df_clean.iterrows()):
+                                property_data = row.to_dict()
+                                property_id = processor.format_property_identifier(row)
+                                if generation_mode == "📝 Static Templates (Gujarati)":
+                                    batch_messages[property_id] = message_generator.generate_static_messages(property_data)
+                                elif generation_mode == "🤖 LLM-Powered Dynamic (Gujarati)":
+                                    batch_messages[property_id] = message_generator.generate_llm_gujarati_messages(property_data)
+                                else:
+                                    batch_messages[property_id] = message_generator.generate_llm_english_messages(property_data)
+                                progress_bar.progress((idx + 1) / len(df_clean))
+                                time.sleep(0.1)
+                            progress_bar.empty()
+                            status_text.empty()
+                        # Prepare ZIP file for download
+                        zip_buffer = io.BytesIO()
+                        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                            for idx, (property_id, messages) in enumerate(batch_messages.items()):
+                                tag = df_clean.iloc[idx].get('Tag', None) or property_id.split(' - ')[0]
+                                filename = f"{tag}_Marketing_Messages.txt".replace(" ", "_")
+                                file_content = create_download_content(messages, messages[0] if messages else {})
+                                zip_file.writestr(filename, file_content)
+                        zip_buffer.seek(0)
+                        st.download_button(
+                            label="⬇️ Download All Messages (ZIP)",
+                            data=zip_buffer,
+                            file_name=f"All_Properties_Messages_{time.strftime('%Y%m%d_%H%M%S')}.zip",
+                            mime="application/zip",
+                            use_container_width=True
+                        )
+                        # DISPLAY ALL BATCH MESSAGES ON SCREEN
+                        st.markdown("## 📋 All Properties: Generated Messages")
+                        for property_id, messages in batch_messages.items():
+                            st.markdown(f"### 🏠 {property_id}")
+                            for idx, msg in enumerate(messages):
+                                st.markdown(f"**Day {idx+1}:**")
+                                st.markdown(f"<div class='gujarati-text' style='margin-bottom:12px;white-space:pre-line'>{msg['message'] if isinstance(msg, dict) else msg}</div>", unsafe_allow_html=True)
+                            st.markdown("---")
+                        st.success(f"✅ Batch processing completed for {len(df_clean)} properties!")
             except Exception as e:
                 st.error(f"❌ Error processing file: {str(e)}")
     with col2:
         st.markdown("### 📖 How to Use")
         st.markdown("""
         1. **Upload** your property data file (CSV/Excel)
-        2. **Select** generation mode (Static/LLM Gujarati/LLM English)
-        3. **Choose** a property from the dropdown
-        4. **Generate** 8-day message sequence
-        5. **Copy** individual messages or download all
-        6. **Use** batch processing for multiple properties
+        2. **Select** a property or run batch mode
+        3. **Generate** 8-day message sequence
+        4. **Copy** individual messages or download all
+        5. **Use** batch processing for multiple properties (ZIP download)
         """)
         st.markdown("### ✨ Features")
         st.markdown("""
@@ -496,9 +450,8 @@ def main():
         - 🌐 **Gujarati & English Language**
         - 📝 **Static Templates**
         - 🤖 **AI-Powered Generation**
-        - 📍 **Location-Based Context**
         - 📱 **WhatsApp Optimized**
-        - 💾 **Batch Processing**
+        - 💾 **Batch Processing & ZIP Download**
         - 📋 **Easy Copy & Download**
         """)
         with st.expander("📊 Sample Data Format"):
@@ -514,7 +467,8 @@ def main():
                 "I": "સેમી ફર્નિશ્ડ",
                 "J": "5 વર્ષ",
                 "K": "https://360tour.link",
-                "L": "https://video.link"
+                "L": "https://video.link",
+                "Tag": "SAI-101"
             }
             st.json(sample_data)
 
