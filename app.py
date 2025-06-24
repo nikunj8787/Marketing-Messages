@@ -82,7 +82,9 @@ def done_to_closing_templates(row):
         f"💰 Price: {row['D']}, Facing: {row['H']}, Furnishing: {row['I']}",
         f"🔗 360 Tour: {row['K']} | Video: {row['L']}",
         f"🤝 Cleardeals: 0% brokerage, loan/legal help, visit assist, negotiation support.",
-        f"📞 Reply YES to proceed with closing steps."
+        f"📞 Reply YES to proceed with closing steps.",
+        f"📈 For valuation, check: {VALUATION_LINK}",
+        f"💸 Check EMI: {EMI_LINK}"
     ]
 
 # --- LLM Prompts ---
@@ -153,6 +155,12 @@ def done_to_closing_llm_prompts(row, language="Gujarati"):
         prompts.append(
             f"Create a Gujarati WhatsApp message with a call to action to reply YES to proceed with closing."
         )
+        prompts.append(
+            f"Create a Gujarati WhatsApp message mentioning property valuation: {VALUATION_LINK}"
+        )
+        prompts.append(
+            f"Create a Gujarati WhatsApp message mentioning EMI calculator: {EMI_LINK}"
+        )
     else:  # English
         prompts.append(
             f"Write an English WhatsApp message thanking the buyer for visiting {row['B']} and encouraging them to move towards closing."
@@ -172,6 +180,12 @@ def done_to_closing_llm_prompts(row, language="Gujarati"):
         prompts.append(
             f"Write an English WhatsApp message with a call to action to reply YES to proceed with closing."
         )
+        prompts.append(
+            f"Write an English WhatsApp message mentioning property valuation: {VALUATION_LINK}"
+        )
+        prompts.append(
+            f"Write an English WhatsApp message mentioning EMI calculator: {EMI_LINK}"
+        )
     return prompts
 
 def generate_llm_messages(row, llm, prompts, language="Gujarati"):
@@ -182,7 +196,7 @@ def generate_llm_messages(row, llm, prompts, language="Gujarati"):
         time.sleep(0.5)
     return messages
 
-def create_download_content(messages: List[str], property_data: Dict, header: str) -> str:
+def create_download_content(messages: list, property_data: dict, header: str) -> str:
     content = f"ClearDeals Marketing Messages\n"
     content += f"Property: {property_data.get('B', 'NA')}\n"
     content += f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -197,7 +211,6 @@ def create_download_content(messages: List[str], property_data: Dict, header: st
 st.title("ClearDeals Marketing Generator")
 st.markdown("Generate two sets of marketing messages per property: (1) Visit Done to Closing, (2) Visit Scheduled to Visit Done.")
 
-# --- 3 Options for Message Generation ---
 mode = st.radio(
     "Choose Message Generation Mode:",
     [
@@ -222,7 +235,7 @@ if uploaded_file:
         else:
             df = pd.read_json(uploaded_file)
         df.columns = [col.strip() for col in df.columns]
-        expected = ['B','C','E','G','H','I','J','K','L']
+        expected = ['B','C','E','G','H','I','J','K','L','D']
         for col in expected:
             if col not in df.columns:
                 df[col] = "NA"
@@ -235,7 +248,6 @@ if uploaded_file:
             for idx, row in df.iterrows():
                 row = row.fillna("NA")
                 tag = safe_filename(str(row['Tag']))
-                # Generate both sets as per selected mode
                 if mode == "📝 Static (Gujarati Templates)":
                     closing_msgs = done_to_closing_templates(row)
                     scheduled_msgs = scheduled_to_done_templates(row)
